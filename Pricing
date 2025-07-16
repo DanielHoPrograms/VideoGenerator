@@ -1,0 +1,464 @@
+
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { createPageUrl } from "@/utils";
+import { User } from "@/entities/User";
+import { 
+  Check, 
+  Crown, 
+  Zap, 
+  ArrowRight, 
+  Sparkles,
+  Video,
+  Clock,
+  TrendingUp
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import StripeButton from "../components/stripe/StripeButton"; // Added import
+
+const translations = {
+  en: {
+    title: "Choose Your Plan",
+    subtitle: "Select the perfect plan for your content creation needs",
+    currentPlan: "Current Plan",
+    upgrade: "Upgrade",
+    downgrade: "Downgrade",
+    getStarted: "Get Started",
+    mostPopular: "Most Popular",
+    enterprise: "Enterprise",
+    billing: {
+      monthly: "Monthly",
+      yearly: "Yearly",
+      save: "Save 20%"
+    },
+    plans: {
+      free: {
+        name: "Free",
+        price: "$0",
+        period: "forever",
+        description: "Perfect for getting started",
+        features: [
+          "1 video per day",
+          "Basic AI script generation",
+          "720p video quality",
+          "3 video styles",
+          "Community support"
+        ]
+      },
+      pro: {
+        name: "Pro",
+        price: "$9.99",
+        period: "per month",
+        description: "Ideal for regular creators",
+        features: [
+          "5 videos per day",
+          "Advanced AI script generation",
+          "1080p video quality",
+          "All video styles",
+          "Priority support",
+          "Custom thumbnails",
+          "Analytics dashboard"
+        ]
+      },
+      ultimate: {
+        name: "Ultimate",
+        price: "$29.99",
+        period: "per month",
+        description: "For professional creators",
+        features: [
+          "Unlimited videos",
+          "Premium AI models",
+          "4K video quality",
+          "Custom branding",
+          "White-label options",
+          "API access",
+          "Dedicated support",
+          "Team collaboration"
+        ]
+      }
+    },
+    faq: {
+      title: "Frequently Asked Questions",
+      items: [
+        {
+          question: "Can I change my plan anytime?",
+          answer: "Yes, you can upgrade or downgrade your plan at any time. Changes take effect immediately."
+        },
+        {
+          question: "What happens to my videos if I downgrade?",
+          answer: "All your previously generated videos remain accessible. Only future generation limits will change."
+        },
+        {
+          question: "Do you offer refunds?",
+          answer: "Yes, we offer a 30-day money-back guarantee for all paid plans."
+        },
+        {
+          question: "Is there a free trial?",
+          answer: "Yes, all users start with our free plan. You can upgrade anytime to unlock more features."
+        }
+      ]
+    }
+  },
+  zh: {
+    title: "选择您的计划",
+    subtitle: "为您的内容创作需求选择完美的计划",
+    currentPlan: "当前计划",
+    upgrade: "升级",
+    downgrade: "降级",
+    getStarted: "开始使用",
+    mostPopular: "最受欢迎",
+    enterprise: "企业版",
+    billing: {
+      monthly: "月付",
+      yearly: "年付",
+      save: "省20%"
+    },
+    plans: {
+      free: {
+        name: "免费版",
+        price: "￥0",
+        period: "永久",
+        description: "适合入门使用",
+        features: [
+          "每天1个视频",
+          "基础AI脚本生成",
+          "720p视频质量",
+          "3种视频风格",
+          "社区支持"
+        ]
+      },
+      pro: {
+        name: "专业版",
+        price: "￥68",
+        period: "每月",
+        description: "适合常规创作者",
+        features: [
+          "每天5个视频",
+          "高级AI脚本生成",
+          "1080p视频质量",
+          "所有视频风格",
+          "优先支持",
+          "自定义缩略图",
+          "分析仪表板"
+        ]
+      },
+      ultimate: {
+        name: "旗舰版",
+        price: "￥198",
+        period: "每月",
+        description: "适合专业创作者",
+        features: [
+          "无限视频",
+          "高端AI模型",
+          "4K视频质量",
+          "自定义品牌",
+          "白标选项",
+          "API访问",
+          "专属支持",
+          "团队协作"
+        ]
+      }
+    },
+    faq: {
+      title: "常见问题",
+      items: [
+        {
+          question: "我可以随时更改计划吗？",
+          answer: "是的，您可以随时升级或降级计划。更改立即生效。"
+        },
+        {
+          question: "如果我降级，我的视频会怎样？",
+          answer: "您之前生成的所有视频仍然可以访问。只有未来的生成限制会改变。"
+        },
+        {
+          question: "您提供退款吗？",
+          answer: "是的，我们为所有付费计划提供30天退款保证。"
+        },
+        {
+          question: "有免费试用吗？",
+          answer: "是的，所有用户都从免费计划开始。您可以随时升级以解锁更多功能。"
+        }
+      ]
+    }
+  }
+};
+
+export default function Pricing() {
+  const navigate = useNavigate();
+  const [user, setUser] = useState(null);
+  const [language, setLanguage] = useState("en");
+  const [billingPeriod, setBillingPeriod] = useState("monthly");
+  const [isLoading, setIsLoading] = useState(true);
+
+  const t = translations[language];
+
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  const checkAuth = async () => {
+    try {
+      const userData = await User.me();
+      setUser(userData);
+      setLanguage(userData.preferred_language || "en");
+    } catch (error) {
+      // User not logged in, that's okay for pricing page
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePlanSelection = async (planTier) => {
+    // This will now be handled by the StripeButton component
+    return;
+  };
+
+  const getPlanButtonText = (planTier) => {
+    if (!user) return t.getStarted;
+    
+    if (user.subscription_tier === planTier) {
+      return t.currentPlan;
+    }
+    
+    const tierOrder = { free: 0, pro: 1, ultimate: 2 };
+    const currentTierIndex = tierOrder[user.subscription_tier];
+    const targetTierIndex = tierOrder[planTier];
+    
+    if (targetTierIndex > currentTierIndex) {
+      return t.upgrade;
+    } else if (targetTierIndex < currentTierIndex) {
+      return t.downgrade;
+    }
+    
+    return t.getStarted;
+  };
+
+  const isPlanCurrent = (planTier) => {
+    return user?.subscription_tier === planTier;
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-400"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="text-center mb-16">
+          <h1 className="text-4xl md:text-6xl font-bold text-white mb-6">
+            {t.title}
+          </h1>
+          <p className="text-xl text-gray-300 max-w-3xl mx-auto">
+            {t.subtitle}
+          </p>
+        </div>
+
+        {/* Billing Toggle */}
+        <div className="flex justify-center mb-12">
+          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-1 flex">
+            <button
+              onClick={() => setBillingPeriod("monthly")}
+              className={`px-6 py-3 rounded-lg font-medium transition-all ${
+                billingPeriod === "monthly"
+                  ? "bg-purple-500 text-white"
+                  : "text-gray-300 hover:text-white"
+              }`}
+            >
+              {t.billing.monthly}
+            </button>
+            <button
+              onClick={() => setBillingPeriod("yearly")}
+              className={`px-6 py-3 rounded-lg font-medium transition-all relative ${
+                billingPeriod === "yearly"
+                  ? "bg-purple-500 text-white"
+                  : "text-gray-300 hover:text-white"
+              }`}
+            >
+              {t.billing.yearly}
+              <Badge className="absolute -top-2 -right-2 bg-green-500 text-white text-xs">
+                {t.billing.save}
+              </Badge>
+            </button>
+          </div>
+        </div>
+
+        {/* Pricing Cards */}
+        <div className="grid md:grid-cols-3 gap-8 mb-16">
+          {/* Free Plan */}
+          <Card className={`relative bg-white/10 backdrop-blur-sm border-white/20 hover:bg-white/20 transition-all duration-300 ${
+            isPlanCurrent('free') ? 'ring-2 ring-purple-500' : ''
+          }`}>
+            <CardHeader className="p-8">
+              <div className="flex items-center justify-between mb-4">
+                <CardTitle className="text-2xl font-bold text-white">
+                  {t.plans.free.name}
+                </CardTitle>
+                {isPlanCurrent('free') && (
+                  <Badge className="bg-purple-500 text-white">
+                    {t.currentPlan}
+                  </Badge>
+                )}
+              </div>
+              <div className="mb-4">
+                <span className="text-4xl font-bold text-white">{t.plans.free.price}</span>
+                <span className="text-gray-300 ml-2">{t.plans.free.period}</span>
+              </div>
+              <p className="text-gray-300">{t.plans.free.description}</p>
+            </CardHeader>
+            <CardContent className="p-8 pt-0">
+              <StripeButton
+                planTier="free"
+                currentTier={user?.subscription_tier}
+                price={t.plans.free.price}
+                buttonText={getPlanButtonText('free')}
+                className={`w-full mb-6 ${
+                  isPlanCurrent('free')
+                    ? 'bg-gray-500 cursor-not-allowed'
+                    : 'bg-white/20 hover:bg-white/30 text-white border-white/20'
+                } border`}
+                disabled={isPlanCurrent('free')}
+              />
+              <ul className="space-y-3">
+                {t.plans.free.features.map((feature, index) => (
+                  <li key={index} className="flex items-center gap-3">
+                    <Check className="w-5 h-5 text-green-400 flex-shrink-0" />
+                    <span className="text-gray-300">{feature}</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+
+          {/* Pro Plan */}
+          <Card className={`relative bg-white/10 backdrop-blur-sm border-white/20 hover:bg-white/20 transition-all duration-300 ${
+            isPlanCurrent('pro') ? 'ring-2 ring-purple-500' : ''
+          }`}>
+            <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+              <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2">
+                {t.mostPopular}
+              </Badge>
+            </div>
+            <CardHeader className="p-8">
+              <div className="flex items-center justify-between mb-4">
+                <CardTitle className="text-2xl font-bold text-white">
+                  {t.plans.pro.name}
+                </CardTitle>
+                {isPlanCurrent('pro') && (
+                  <Badge className="bg-purple-500 text-white">
+                    {t.currentPlan}
+                  </Badge>
+                )}
+              </div>
+              <div className="mb-4">
+                <span className="text-4xl font-bold text-white">{t.plans.pro.price}</span>
+                <span className="text-gray-300 ml-2">{t.plans.pro.period}</span>
+              </div>
+              <p className="text-gray-300">{t.plans.pro.description}</p>
+            </CardHeader>
+            <CardContent className="p-8 pt-0">
+              <StripeButton
+                planTier="pro"
+                currentTier={user?.subscription_tier}
+                price={t.plans.pro.price}
+                buttonText={getPlanButtonText('pro')}
+                className={`w-full mb-6 ${
+                  isPlanCurrent('pro')
+                    ? 'bg-gray-500 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white'
+                }`}
+                disabled={isPlanCurrent('pro')}
+              />
+              <ul className="space-y-3">
+                {t.plans.pro.features.map((feature, index) => (
+                  <li key={index} className="flex items-center gap-3">
+                    <Check className="w-5 h-5 text-green-400 flex-shrink-0" />
+                    <span className="text-gray-300">{feature}</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+
+          {/* Ultimate Plan */}
+          <Card className={`relative bg-white/10 backdrop-blur-sm border-white/20 hover:bg-white/20 transition-all duration-300 ${
+            isPlanCurrent('ultimate') ? 'ring-2 ring-purple-500' : ''
+          }`}>
+            <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+              <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-2">
+                <Crown className="w-4 h-4 mr-1" />
+                {t.enterprise}
+              </Badge>
+            </div>
+            <CardHeader className="p-8">
+              <div className="flex items-center justify-between mb-4">
+                <CardTitle className="text-2xl font-bold text-white">
+                  {t.plans.ultimate.name}
+                </CardTitle>
+                {isPlanCurrent('ultimate') && (
+                  <Badge className="bg-purple-500 text-white">
+                    {t.currentPlan}
+                  </Badge>
+                )}
+              </div>
+              <div className="mb-4">
+                <span className="text-4xl font-bold text-white">{t.plans.ultimate.price}</span>
+                <span className="text-gray-300 ml-2">{t.plans.ultimate.period}</span>
+              </div>
+              <p className="text-gray-300">{t.plans.ultimate.description}</p>
+            </CardHeader>
+            <CardContent className="p-8 pt-0">
+              <StripeButton
+                planTier="ultimate"
+                currentTier={user?.subscription_tier}
+                price={t.plans.ultimate.price}
+                buttonText={getPlanButtonText('ultimate')}
+                className={`w-full mb-6 ${
+                  isPlanCurrent('ultimate')
+                    ? 'bg-gray-500 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white'
+                }`}
+                disabled={isPlanCurrent('ultimate')}
+              />
+              <ul className="space-y-3">
+                {t.plans.ultimate.features.map((feature, index) => (
+                  <li key={index} className="flex items-center gap-3">
+                    <Check className="w-5 h-5 text-green-400 flex-shrink-0" />
+                    <span className="text-gray-300">{feature}</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* FAQ Section */}
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-3xl font-bold text-white text-center mb-12">
+            {t.faq.title}
+          </h2>
+          <div className="space-y-6">
+            {t.faq.items.map((item, index) => (
+              <Card key={index} className="bg-white/10 backdrop-blur-sm border-white/20">
+                <CardContent className="p-6">
+                  <h3 className="text-xl font-semibold text-white mb-3">
+                    {item.question}
+                  </h3>
+                  <p className="text-gray-300">
+                    {item.answer}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
