@@ -1,0 +1,100 @@
+import React, { useState } from 'react';
+import { Button } from "@/components/ui/button";
+import { User } from "@/entities/User";
+import { Loader2, Crown, Zap } from "lucide-react";
+
+const STRIPE_PRICE_IDS = {
+  pro: 'price_1234567890pro',
+  ultimate: 'price_1234567890ultimate'
+};
+
+export default function StripeButton({ 
+  planTier, 
+  currentTier, 
+  price, 
+  buttonText, 
+  className = "",
+  disabled = false 
+}) {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubscription = async () => {
+    if (disabled || currentTier === planTier) return;
+
+    setIsLoading(true);
+
+    try {
+      const user = await User.me();
+      
+      if (planTier === 'free') {
+        await cancelSubscription(user);
+        return;
+      }
+
+      // For demo purposes, simulate successful upgrade
+      console.log('Demo mode: Simulating successful upgrade to', planTier);
+      
+      await User.updateMyUserData({
+        subscription_tier: planTier,
+        stripe_customer_id: user.stripe_customer_id || `cus_demo_${Date.now()}`,
+        stripe_subscription_id: `sub_demo_${Date.now()}`,
+        subscription_status: 'active',
+        subscription_end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      });
+      
+      // Show success message
+      alert(`Successfully upgraded to ${planTier.toUpperCase()} plan! Your new limits are now active.`);
+      
+      // Refresh the page to show updated subscription
+      window.location.reload();
+      
+    } catch (error) {
+      console.error('Subscription error:', error);
+      alert('Demo mode: Subscription simulation failed. In production, this would redirect to Stripe checkout.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const cancelSubscription = async (user) => {
+    try {
+      await User.updateMyUserData({
+        subscription_tier: 'free',
+        subscription_status: 'canceled',
+        stripe_subscription_id: null
+      });
+      
+      alert('Successfully downgraded to Free plan.');
+      window.location.reload();
+    } catch (error) {
+      console.error('Cancellation error:', error);
+      alert('Failed to cancel subscription. Please contact support.');
+    }
+  };
+
+  const getButtonIcon = () => {
+    if (planTier === 'ultimate') return <Crown className="w-4 h-4 mr-2" />;
+    if (planTier === 'pro') return <Zap className="w-4 h-4 mr-2" />;
+    return null;
+  };
+
+  return (
+    <Button
+      onClick={handleSubscription}
+      disabled={disabled || isLoading || currentTier === planTier}
+      className={className}
+    >
+      {isLoading ? (
+        <>
+          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          Processing...
+        </>
+      ) : (
+        <>
+          {getButtonIcon()}
+          {buttonText}
+        </>
+      )}
+    </Button>
+  );
+}
