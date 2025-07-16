@@ -1,0 +1,237 @@
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { 
+  Users, 
+  Copy, 
+  Share2, 
+  Gift,
+  Check,
+  Crown,
+  Zap
+} from "lucide-react";
+
+const translations = {
+  en: {
+    title: "Invite Friends & Earn Rewards",
+    subtitle: "Share VideoAI and unlock premium features",
+    yourCode: "Your Referral Code",
+    shareLink: "Share Link",
+    copyLink: "Copy Link",
+    linkCopied: "Link copied!",
+    totalReferrals: "Total Referrals",
+    rewards: "Rewards",
+    rewardTiers: {
+      tier1: "3 referrals = 1 week Pro",
+      tier2: "5 referrals = 1 month Pro",
+      tier3: "10 referrals = 3 months Ultimate",
+      tier4: "25 referrals = 1 year Ultimate"
+    },
+    howItWorks: "How it works",
+    steps: [
+      "Share your unique link with friends",
+      "They sign up and create their first video",
+      "You both get bonus video credits",
+      "Unlock premium features with more referrals"
+    ]
+  },
+  zh: {
+    title: "邀请朋友获得奖励",
+    subtitle: "分享VideoAI并解锁高级功能",
+    yourCode: "您的邀请码",
+    shareLink: "分享链接",
+    copyLink: "复制链接",
+    linkCopied: "链接已复制！",
+    totalReferrals: "总邀请数",
+    rewards: "奖励",
+    rewardTiers: {
+      tier1: "3个邀请 = 1周专业版",
+      tier2: "5个邀请 = 1个月专业版",
+      tier3: "10个邀请 = 3个月旗舰版",
+      tier4: "25个邀请 = 1年旗舰版"
+    },
+    howItWorks: "使用方法",
+    steps: [
+      "与朋友分享您的专属链接",
+      "他们注册并创建第一个视频",
+      "您们都会获得额外视频积分",
+      "通过更多邀请解锁高级功能"
+    ]
+  }
+};
+
+export default function ReferralWidget({ user, language = "en" }) {
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  const t = translations[language];
+  
+  if (!user || !user.referral_code) {
+    return null;
+  }
+  
+  const referralUrl = `${window.location.origin}/?ref=${user.referral_code}`;
+  const referralCount = user.referral_count || 0;
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(referralUrl);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy link:', error);
+    }
+  };
+
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: 'Join VideoAI - Create Viral Videos with AI',
+        text: 'Check out VideoAI! Create amazing short videos with AI. Use my referral link to get started:',
+        url: referralUrl,
+      });
+    } else {
+      handleCopyLink();
+    }
+  };
+
+  const getRewardProgress = () => {
+    const tiers = [
+      { count: 3, reward: "1 week Pro", icon: Zap, color: "text-blue-400" },
+      { count: 5, reward: "1 month Pro", icon: Zap, color: "text-purple-400" },
+      { count: 10, reward: "3 months Ultimate", icon: Crown, color: "text-yellow-400" },
+      { count: 25, reward: "1 year Ultimate", icon: Crown, color: "text-orange-400" }
+    ];
+
+    return tiers.map((tier, index) => ({
+      ...tier,
+      achieved: referralCount >= tier.count,
+      progress: Math.min((referralCount / tier.count) * 100, 100)
+    }));
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Main Referral Card */}
+      <Card className="bg-gradient-to-br from-purple-500/20 to-pink-500/20 backdrop-blur-sm border-purple-500/30">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center gap-2">
+            <Gift className="w-5 h-5" />
+            {t.title}
+          </CardTitle>
+          <p className="text-gray-300">{t.subtitle}</p>
+        </CardHeader>
+        
+        <CardContent className="space-y-4">
+          {/* Referral Link */}
+          <div className="space-y-2">
+            <label className="text-white font-medium">{t.shareLink}</label>
+            <div className="flex gap-2">
+              <Input
+                value={referralUrl}
+                readOnly
+                className="bg-white/10 border-white/20 text-white"
+              />
+              <Button
+                onClick={handleCopyLink}
+                variant="outline"
+                className={`border-white/20 text-white hover:bg-white/20 ${
+                  linkCopied ? 'bg-green-500/20 border-green-500/50' : ''
+                }`}
+              >
+                {linkCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              </Button>
+              <Button
+                onClick={handleShare}
+                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+              >
+                <Share2 className="w-4 h-4" />
+              </Button>
+            </div>
+            {linkCopied && (
+              <p className="text-green-400 text-sm">{t.linkCopied}</p>
+            )}
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="text-center">
+              <div className="text-3xl font-bold text-white">{referralCount}</div>
+              <div className="text-gray-300 text-sm">{t.totalReferrals}</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-purple-400">{user.referral_code}</div>
+              <div className="text-gray-300 text-sm">{t.yourCode}</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Reward Tiers */}
+      <Card className="bg-white/10 backdrop-blur-sm border-white/20">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center gap-2">
+            <Crown className="w-5 h-5" />
+            {t.rewards}
+          </CardTitle>
+        </CardHeader>
+        
+        <CardContent>
+          <div className="space-y-4">
+            {getRewardProgress().map((tier, index) => (
+              <div key={index} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <tier.icon className={`w-4 h-4 ${tier.color}`} />
+                    <span className="text-white font-medium">
+                      {tier.count} referrals = {tier.reward}
+                    </span>
+                  </div>
+                  {tier.achieved && (
+                    <Badge className="bg-green-500/20 text-green-300 border-green-500/50">
+                      Unlocked!
+                    </Badge>
+                  )}
+                </div>
+                <div className="w-full bg-gray-700 rounded-full h-2">
+                  <div
+                    className={`h-2 rounded-full transition-all duration-500 ${
+                      tier.achieved 
+                        ? 'bg-gradient-to-r from-green-400 to-green-500' 
+                        : 'bg-gradient-to-r from-purple-400 to-pink-400'
+                    }`}
+                    style={{ width: `${tier.progress}%` }}
+                  />
+                </div>
+                <div className="text-right text-sm text-gray-400">
+                  {referralCount} / {tier.count}
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* How it Works */}
+      <Card className="bg-white/10 backdrop-blur-sm border-white/20">
+        <CardHeader>
+          <CardTitle className="text-white">{t.howItWorks}</CardTitle>
+        </CardHeader>
+        
+        <CardContent>
+          <div className="space-y-3">
+            {t.steps.map((step, index) => (
+              <div key={index} className="flex items-start gap-3">
+                <div className="w-6 h-6 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0 mt-0.5">
+                  {index + 1}
+                </div>
+                <p className="text-gray-300">{step}</p>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
