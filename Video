@@ -1,0 +1,78 @@
+{
+  "name": "Video",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Video title or topic"
+    },
+    "script": {
+      "type": "string",
+      "description": "Generated or provided script content"
+    },
+    "video_url": {
+      "type": "string",
+      "description": "URL to the generated video file"
+    },
+    "thumbnail_url": {
+      "type": "string",
+      "description": "URL to video thumbnail"
+    },
+    "duration": {
+      "type": "number",
+      "description": "Video duration in seconds"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "processing",
+        "completed",
+        "failed"
+      ],
+      "default": "processing",
+      "description": "Video generation status"
+    },
+    "generation_prompt": {
+      "type": "string",
+      "description": "Original prompt used for generation"
+    },
+    "style": {
+      "type": "string",
+      "enum": [
+        "cinematic",
+        "animated",
+        "realistic",
+        "artistic"
+      ],
+      "default": "cinematic",
+      "description": "Video style preference"
+    },
+    "platform": {
+      "type": "string",
+      "enum": [
+        "youtube_shorts",
+        "tiktok",
+        "instagram_reels"
+      ],
+      "default": "youtube_shorts",
+      "description": "Target platform for the video"
+    },
+    "embed_code": {
+      "type": "string",
+      "description": "YouTube embed code or video player HTML"
+    },
+    "generation_time": {
+      "type": "number",
+      "description": "Time taken to generate video in seconds"
+    },
+    "is_featured": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this video is featured on the landing page"
+    }
+  },
+  "required": [
+    "title",
+    "generation_prompt"
+  ]
+}
