@@ -1,0 +1,433 @@
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { createPageUrl } from "@/utils";
+import { User } from "@/entities/User";
+import { Video } from "@/entities/Video";
+import { 
+  Play, 
+  Download, 
+  ExternalLink, 
+  Plus, 
+  Calendar,
+  Clock,
+  TrendingUp,
+  Crown,
+  Zap,
+  Filter,
+  Search,
+  Users
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { format } from "date-fns";
+import ReferralWidget from "../components/referral/ReferralWidget";
+
+const translations = {
+  en: {
+    title: "Your Video Dashboard",
+    subtitle: "Manage and track your AI-generated content",
+    stats: {
+      totalVideos: "Total Videos",
+      todayGenerated: "Generated Today",
+      remainingToday: "Remaining Today",
+      referrals: "Referrals"
+    },
+    createNew: "Create New Video",
+    searchPlaceholder: "Search videos...",
+    filterByStatus: "Filter by Status",
+    filterByPlatform: "Filter by Platform",
+    noVideos: "No videos found",
+    noVideosSubtitle: "Start creating your first AI-generated video",
+    getStarted: "Get Started",
+    statuses: {
+      processing: "Processing",
+      completed: "Completed",
+      failed: "Failed"
+    },
+    platforms: {
+      youtube_shorts: "YouTube Shorts",
+      tiktok: "TikTok",
+      instagram_reels: "Instagram Reels"
+    },
+    actions: {
+      download: "Download",
+      share: "Share",
+      view: "View"
+    },
+    upgrade: "Upgrade Plan",
+    unlimited: "Unlimited"
+  },
+  zh: {
+    title: "您的视频仪表板",
+    subtitle: "管理和跟踪您的AI生成内容",
+    stats: {
+      totalVideos: "总视频数",
+      todayGenerated: "今日生成",
+      remainingToday: "今日剩余",
+      referrals: "推荐数"
+    },
+    createNew: "创建新视频",
+    searchPlaceholder: "搜索视频...",
+    filterByStatus: "按状态筛选",
+    filterByPlatform: "按平台筛选",
+    noVideos: "未找到视频",
+    noVideosSubtitle: "开始创建您的第一个AI生成视频",
+    getStarted: "开始使用",
+    statuses: {
+      processing: "处理中",
+      completed: "已完成",
+      failed: "失败"
+    },
+    platforms: {
+      youtube_shorts: "YouTube短视频",
+      tiktok: "TikTok",
+      instagram_reels: "Instagram短视频"
+    },
+    actions: {
+      download: "下载",
+      share: "分享",
+      view: "查看"
+    },
+    upgrade: "升级计划",
+    unlimited: "无限制"
+  }
+};
+
+const subscriptionLimits = {
+  free: 1,
+  pro: 5,
+  ultimate: 999
+};
+
+const statusColors = {
+  processing: "bg-yellow-500/20 text-yellow-300 border-yellow-500/50",
+  completed: "bg-green-500/20 text-green-300 border-green-500/50",
+  failed: "bg-red-500/20 text-red-300 border-red-500/50"
+};
+
+export default function Dashboard() {
+  const navigate = useNavigate();
+  const [user, setUser] = useState(null);
+  const [videos, setVideos] = useState([]);
+  const [language, setLanguage] = useState("en");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [platformFilter, setPlatformFilter] = useState("all");
+  const [isLoading, setIsLoading] = useState(true);
+
+  const t = translations[language];
+
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  const checkAuth = async () => {
+    try {
+      const userData = await User.me();
+      setUser(userData);
+      setLanguage(userData.preferred_language || "en");
+      await loadVideos();
+    } catch (error) {
+      User.loginWithRedirect(window.location.href);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadVideos = async () => {
+    try {
+      const videoList = await Video.list("-created_date");
+      setVideos(videoList);
+    } catch (error) {
+      console.error("Error loading videos:", error);
+    }
+  };
+
+  const getRemainingVideos = () => {
+    if (!user) return 0;
+    
+    const today = new Date().toISOString().split('T')[0];
+    const lastGenDate = user.last_generation_date;
+    
+    if (lastGenDate !== today) {
+      return subscriptionLimits[user.subscription_tier];
+    }
+    
+    return Math.max(0, subscriptionLimits[user.subscription_tier] - (user.videos_generated_today || 0));
+  };
+
+  const getTodayGenerated = () => {
+    if (!user) return 0;
+    
+    const today = new Date().toISOString().split('T')[0];
+    const lastGenDate = user.last_generation_date;
+    
+    if (lastGenDate === today) {
+      return user.videos_generated_today || 0;
+    }
+    
+    return 0;
+  };
+
+  const filteredVideos = videos.filter(video => {
+    const matchesSearch = video.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         video.script.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === "all" || video.status === statusFilter;
+    const matchesPlatform = platformFilter === "all" || video.platform === platformFilter;
+    
+    return matchesSearch && matchesStatus && matchesPlatform;
+  });
+
+  const handleVideoAction = (video, action) => {
+    switch (action) {
+      case 'download':
+        window.open(video.video_url, '_blank');
+        break;
+      case 'share':
+        navigator.clipboard.writeText(video.video_url);
+        alert('Video URL copied to clipboard!');
+        break;
+      case 'view':
+        window.open(video.video_url, '_blank');
+        break;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-400"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
+              {t.title}
+            </h1>
+            <p className="text-gray-300 text-lg">
+              {t.subtitle}
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <Button
+              onClick={() => navigate(createPageUrl("Pricing"))}
+              variant="outline"
+              className="border-purple-500/50 text-purple-300 hover:bg-purple-500/20"
+            >
+              <Crown className="w-4 h-4 mr-2" />
+              {t.upgrade}
+            </Button>
+            <Button
+              onClick={() => navigate(createPageUrl("Generate"))}
+              className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              {t.createNew}
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid lg:grid-cols-4 gap-8">
+          {/* Main Content */}
+          <div className="lg:col-span-3 space-y-8">
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <Card className="bg-white/10 backdrop-blur-sm border-white/20">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-300 text-sm font-medium">{t.stats.totalVideos}</p>
+                      <p className="text-3xl font-bold text-white">{user?.total_videos_generated || 0}</p>
+                    </div>
+                    <div className="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center">
+                      <Play className="w-6 h-6 text-purple-400" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white/10 backdrop-blur-sm border-white/20">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-300 text-sm font-medium">{t.stats.todayGenerated}</p>
+                      <p className="text-3xl font-bold text-white">{getTodayGenerated()}</p>
+                    </div>
+                    <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center">
+                      <TrendingUp className="w-6 h-6 text-green-400" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white/10 backdrop-blur-sm border-white/20">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-300 text-sm font-medium">{t.stats.remainingToday}</p>
+                      <p className="text-3xl font-bold text-white">
+                        {user?.subscription_tier === 'ultimate' ? '∞' : getRemainingVideos()}
+                      </p>
+                    </div>
+                    <div className="w-12 h-12 bg-yellow-500/20 rounded-xl flex items-center justify-center">
+                      <Zap className="w-6 h-6 text-yellow-400" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white/10 backdrop-blur-sm border-white/20">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-300 text-sm font-medium">{t.stats.referrals}</p>
+                      <p className="text-3xl font-bold text-white">{user?.referral_count || 0}</p>
+                    </div>
+                    <div className="w-12 h-12 bg-pink-500/20 rounded-xl flex items-center justify-center">
+                      <Users className="w-6 h-6 text-pink-400" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Filters */}
+            <Card className="bg-white/10 backdrop-blur-sm border-white/20">
+              <CardContent className="p-6">
+                <div className="flex flex-col md:flex-row gap-4">
+                  <div className="flex-1">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                      <Input
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder={t.searchPlaceholder}
+                        className="pl-10 bg-white/10 border-white/20 text-white placeholder-gray-400"
+                      />
+                    </div>
+                  </div>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-full md:w-48 bg-white/10 border-white/20 text-white">
+                      <SelectValue placeholder={t.filterByStatus} />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-800 border-slate-700">
+                      <SelectItem value="all" className="text-white">All Status</SelectItem>
+                      {Object.entries(t.statuses).map(([key, value]) => (
+                        <SelectItem key={key} value={key} className="text-white">
+                          {value}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={platformFilter} onValueChange={setPlatformFilter}>
+                    <SelectTrigger className="w-full md:w-48 bg-white/10 border-white/20 text-white">
+                      <SelectValue placeholder={t.filterByPlatform} />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-800 border-slate-700">
+                      <SelectItem value="all" className="text-white">All Platforms</SelectItem>
+                      {Object.entries(t.platforms).map(([key, value]) => (
+                        <SelectItem key={key} value={key} className="text-white">
+                          {value}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Videos Grid */}
+            {filteredVideos.length === 0 ? (
+              <Card className="bg-white/10 backdrop-blur-sm border-white/20">
+                <CardContent className="p-12 text-center">
+                  <Play className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold text-white mb-2">{t.noVideos}</h3>
+                  <p className="text-gray-300 mb-6">{t.noVideosSubtitle}</p>
+                  <Button
+                    onClick={() => navigate(createPageUrl("Generate"))}
+                    className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    {t.getStarted}
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredVideos.map((video) => (
+                  <Card key={video.id} className="bg-white/10 backdrop-blur-sm border-white/20 hover:bg-white/20 transition-all duration-300 group">
+                    <CardHeader className="p-4">
+                      <div className="aspect-video bg-gradient-to-br from-purple-900 to-pink-900 rounded-lg overflow-hidden mb-4 relative">
+                        {video.embed_code ? (
+                          <div 
+                            dangerouslySetInnerHTML={{ __html: video.embed_code }}
+                            className="w-full h-full"
+                          />
+                        ) : (
+                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                            <Play className="w-8 h-8 text-white group-hover:scale-110 transition-transform" />
+                          </div>
+                        )}
+                        <div className="absolute top-2 right-2">
+                          <Badge className={`${statusColors[video.status]} border text-xs`}>
+                            {t.statuses[video.status]}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <CardTitle className="text-white text-lg line-clamp-2">{video.title}</CardTitle>
+                        <div className="flex items-center gap-2 text-sm text-gray-300">
+                          <Calendar className="w-4 h-4" />
+                          {format(new Date(video.created_date), "MMM d, yyyy")}
+                        </div>
+                        <Badge variant="outline" className="text-xs">
+                          {t.platforms[video.platform]}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0">
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleVideoAction(video, 'view')}
+                          className="flex-1 border-white/20 text-white hover:bg-white/20"
+                        >
+                          <ExternalLink className="w-4 h-4 mr-1" />
+                          {t.actions.view}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleVideoAction(video, 'download')}
+                          className="flex-1 border-white/20 text-white hover:bg-white/20"
+                        >
+                          <Download className="w-4 h-4 mr-1" />
+                          {t.actions.download}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Sidebar */}
+          <div className="lg:col-span-1">
+            <ReferralWidget user={user} language={language} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
